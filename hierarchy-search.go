@@ -4,22 +4,41 @@ import "io/ioutil"
 import "fmt"
 import "path/filepath"
 
-// Hierarchy 階層を表す
-type Hierarchy int
+// ルートディレクトリパス
+const rootPath = "//gfs/Shares/00_全社共有/01_セキュリティ対策ソフト"
 
 // 階層を表す
 const (
-	Root Hierarchy = iota
+	Root hierarchy = iota
 	First
 	MoreSecond
 )
 
-func main() {
-	rootPath := "C:/Workspace/golang/src/github.com/yuki-toida/hierarchy-search"
-	search(rootPath, rootPath, "", "")
+// Hierarchy 階層を表す
+type hierarchy int16
+
+// HierarchyInfo 階層情報を表す
+type hierarchyInfo struct {
+	Size  int64
+	Count int32
 }
 
-func search(rootPath string, targetPath string, dir1 string, dir2 string) {
+// 階層マップ
+var hierarchyMap = map[string]hierarchyInfo{}
+
+// エントリポイント
+func main() {
+	search(rootPath, "", "")
+
+	var csv string
+	for k, v := range hierarchyMap {
+		csv += fmt.Sprintf(k+",%v,%v\n", v.Size, v.Count)
+	}
+	fmt.Printf(csv)
+}
+
+// 階層を探索します
+func search(targetPath string, dir1 string, dir2 string) {
 	files, err := ioutil.ReadDir(targetPath)
 
 	if err != nil {
@@ -38,22 +57,26 @@ func search(rootPath string, targetPath string, dir1 string, dir2 string) {
 				dir2 = fileName
 			case MoreSecond:
 			}
-			path := filepath.Join(targetPath, fileName)
-			search(rootPath, path, dir1, dir2)
+			nextPath := filepath.Join(targetPath, fileName)
+			search(nextPath, dir1, dir2)
 		} else {
 			switch hierarchy {
 			case Root:
-				// TODO Rootのファイルの扱い不明
+				// TODO Rootのファイルの扱い
 			case First:
-				fmt.Println(dir1, file.Size())
+				updateHierarchyMap(dir1, file.Size())
+				//fmt.Println(dir1, file.Size())
 			case MoreSecond:
-				fmt.Println(dir2, file.Size())
+				updateHierarchyMap(dir1, file.Size())
+				updateHierarchyMap(dir1+"\\"+dir2, file.Size())
+				//fmt.Println(dir1+"/"+dir2, file.Size())
 			}
 		}
 	}
 }
 
-func getHierarchy(dir1 string, dir2 string) Hierarchy {
+// 階層を取得します
+func getHierarchy(dir1 string, dir2 string) hierarchy {
 	if dir1 == "" {
 		// Root階層
 		return Root
@@ -63,5 +86,17 @@ func getHierarchy(dir1 string, dir2 string) Hierarchy {
 	} else {
 		// 第二階層以下
 		return MoreSecond
+	}
+}
+
+// 階層マップを更新します
+func updateHierarchyMap(key string, size int64) {
+	info, ok := hierarchyMap[key]
+	if ok {
+		info.Count++
+		info.Size += size
+		hierarchyMap[key] = info
+	} else {
+		hierarchyMap[key] = hierarchyInfo{Size: size, Count: 1}
 	}
 }
