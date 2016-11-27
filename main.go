@@ -1,17 +1,22 @@
 package main
 
-import "io/ioutil"
-import "fmt"
-import "path/filepath"
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"strconv"
+	"time"
+)
 
 // ルートディレクトリパス
-const rootPath = "//gfs/Shares/00_全社共有/01_セキュリティ対策ソフト"
+//const rootPath = "//gfs/Shares/00_全社共有/01_セキュリティ対策ソフト/"
+const rootPath = "C:/Workspace/golang/"
 
 // 階層を表す
 const (
 	Root hierarchy = iota
 	First
-	MoreSecond
+	Other
 )
 
 // Hierarchy 階層を表す
@@ -20,7 +25,7 @@ type hierarchy int16
 // HierarchyInfo 階層情報を表す
 type hierarchyInfo struct {
 	Size  int64
-	Count int32
+	Count int
 }
 
 // 階層マップ
@@ -28,13 +33,35 @@ var hierarchyMap = map[string]hierarchyInfo{}
 
 // エントリポイント
 func main() {
-	search(rootPath, "", "")
+	start := time.Now()
 
+	search(rootPath, "", "")
+	output()
+
+	end := time.Now()
+	fmt.Printf("%f(s))", (end.Sub(start)).Seconds())
+}
+
+// csvを出力します
+func output() {
 	var csv string
 	for k, v := range hierarchyMap {
-		csv += fmt.Sprintf(k+",%v,%v\n", v.Size, v.Count)
+		//csv += fmt.Sprintf(k+",%v,%v\n", v.Size, v.Count)
+		csv += rootPath + k + "," + strconv.FormatInt(v.Size, 10) + "," + strconv.Itoa(v.Count) + "\n"
 	}
-	fmt.Printf(csv)
+
+	currentDir, _ := os.Getwd()
+	err := ioutil.WriteFile(currentDir+"/hierarchy.csv", []byte(csv), os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+
+	// currentDir, _ := os.Getwd()
+	// file, _ := os.Create(currentDir + "/hierarchy.csv")
+	// defer file.Close()
+	// w := bufio.NewWriter(file)
+	// w.WriteString(csv)
+	// w.Flush()
 }
 
 // 階層を探索します
@@ -55,9 +82,9 @@ func search(targetPath string, dir1 string, dir2 string) {
 				dir1 = fileName
 			case First:
 				dir2 = fileName
-			case MoreSecond:
+			case Other:
 			}
-			nextPath := filepath.Join(targetPath, fileName)
+			nextPath := targetPath + "/" + fileName
 			search(nextPath, dir1, dir2)
 		} else {
 			switch hierarchy {
@@ -65,11 +92,9 @@ func search(targetPath string, dir1 string, dir2 string) {
 				// TODO Rootのファイルの扱い
 			case First:
 				updateHierarchyMap(dir1, file.Size())
-				//fmt.Println(dir1, file.Size())
-			case MoreSecond:
+			case Other:
 				updateHierarchyMap(dir1, file.Size())
-				updateHierarchyMap(dir1+"\\"+dir2, file.Size())
-				//fmt.Println(dir1+"/"+dir2, file.Size())
+				updateHierarchyMap(dir1+"/"+dir2, file.Size())
 			}
 		}
 	}
@@ -85,7 +110,7 @@ func getHierarchy(dir1 string, dir2 string) hierarchy {
 		return First
 	} else {
 		// 第二階層以下
-		return MoreSecond
+		return Other
 	}
 }
 
