@@ -13,7 +13,9 @@ import (
 )
 
 // ルートディレクトリパス
-const rootPath = "//gfs/Shares/00_全社共有/"
+const rootPath = "\\\\gfs\\Shares\\00_全社共有\\"
+
+//const rootPath = "C:/Workspace/Es/svn/"
 
 // capacity 階層の容量を表す
 type capacity struct {
@@ -27,8 +29,10 @@ var capacityMap = map[string]capacity{}
 // エントリポイント
 func main() {
 	start := time.Now()
+
 	searchRoot()
 	output()
+
 	end := time.Now()
 	fmt.Printf("%f(s)", (end.Sub(start)).Seconds())
 }
@@ -36,18 +40,31 @@ func main() {
 // csvを出力します
 func output() {
 	currentDir, _ := os.Getwd()
-	file, _ := os.OpenFile(currentDir+"/capacity.csv", os.O_CREATE|os.O_WRONLY, 0666)
+	file, _ := os.Create(currentDir + "/capacity.csv")
 	defer file.Close()
-	writer := bufio.NewWriter(transform.NewWriter(file, japanese.ShiftJIS.NewEncoder()))
-
-	var csv string
+	//writer := bufio.NewWriterSize(file, 20000)
+	writer := bufio.NewWriterSize(transform.NewWriter(file, japanese.ShiftJIS.NewEncoder()), 20000)
 	for k, v := range capacityMap {
-		content := rootPath + k + "," + strconv.FormatInt(v.Size, 10) + "," + strconv.Itoa(v.Count) + "\n"
-		writer.WriteString(content)
-		csv += content
+		writer.WriteString(rootPath + k + "," + strconv.FormatInt(v.Size, 10) + "," + strconv.Itoa(v.Count) + "\n")
 	}
+	writer.Flush()
+}
 
-	fmt.Println(csv)
+func test() {
+	currentDir, _ := os.Getwd()
+	txt, _ := os.Open(currentDir + "/hoge.txt")
+	defer txt.Close()
+	scanner := bufio.NewScanner(txt)
+
+	file, _ := os.Create(currentDir + "/hoge.csv")
+	defer file.Close()
+	writer := bufio.NewWriterSize(transform.NewWriter(file, japanese.ShiftJIS.NewEncoder()), 20000)
+
+	for scanner.Scan() {
+		content := scanner.Text()
+		bytes, _ := writer.WriteString(content + "\n")
+		fmt.Println(bytes)
+	}
 	writer.Flush()
 }
 
@@ -57,7 +74,6 @@ func searchRoot() {
 	for _, file := range files {
 		if file.IsDir() {
 			fileName := file.Name()
-			fmt.Println(fileName)
 			capacityMap[fileName] = capacity{Size: 0, Count: 0}
 			searchFirst(fileName)
 		}
@@ -69,7 +85,6 @@ func searchFirst(dir1 string) {
 	for _, file := range files {
 		if file.IsDir() {
 			fileName := file.Name()
-			fmt.Println(dir1 + "/" + fileName)
 			capacityMap[dir1+"/"+fileName] = capacity{Size: 0, Count: 0}
 			searchSecond(dir1, fileName)
 		} else {
