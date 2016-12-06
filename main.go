@@ -13,6 +13,7 @@ import (
 )
 
 // ルートディレクトリパス
+//const root = "C:/Workspace/Es/svn/"
 const root = "\\\\gfs\\Shares\\00_全社共有\\"
 
 // info 階層の容量を表す
@@ -33,19 +34,6 @@ func main() {
 
 	end := time.Now()
 	fmt.Printf("%f(s)", (end.Sub(start)).Seconds())
-}
-
-// csvを出力します
-func output() {
-	dir, _ := os.Getwd()
-	f, _ := os.Create(dir + "/hierarchy-search.csv")
-	defer f.Close()
-	//writer := bufio.NewWriterSize(f, 20000)
-	w := bufio.NewWriterSize(transform.NewWriter(f, japanese.ShiftJIS.NewEncoder()), 20000)
-	for k, v := range infoMap {
-		w.WriteString(root + k + "," + strconv.FormatInt(v.Size, 10) + "," + strconv.Itoa(v.Count) + "\n")
-	}
-	w.Flush()
 }
 
 // 階層探索します
@@ -108,6 +96,19 @@ func update(key string, size int64) {
 	v.Count++
 	v.Size += size
 	infoMap[key] = v
+}
+
+// csvを出力します
+func output() {
+	dir, _ := os.Getwd()
+	f, _ := os.Create(dir + "/hierarchy-search.csv")
+	defer f.Close()
+	//writer := bufio.NewWriterSize(f, 20000)
+	w := bufio.NewWriterSize(transform.NewWriter(f, japanese.ShiftJIS.NewEncoder()), 20000)
+	for k, v := range infoMap {
+		w.WriteString(root + k + "," + strconv.FormatInt(v.Size, 10) + "," + strconv.Itoa(v.Count) + "\n")
+	}
+	w.Flush()
 }
 
 // func test() {
